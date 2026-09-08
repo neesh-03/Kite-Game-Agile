@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>KITE CLASH — Festival of Winds</title>
+<style>
+  /* ============================================================
+     KITE CLASH — self-contained arcade game
+     HTML + CSS + vanilla JS only. No images, no libraries.
+     ============================================================ */
+
+  :root{
+    --navy-950:#080a1c;
+    --navy-900:#0b0e2a;
+    --navy-800:#121640;
+    --navy-700:#1a1f52;
+    --purple:#8b3dff;
+    --purple-soft:#b47bff;
+    --coral:#ff5d7a;
+    --orange:#ff9838;
+    --cyan:#2ee6d6;
+    --gold:#ffd23f;
+    --white:#f4f2ff;
+    --glass:rgba(18,22,64,0.55);
+    --glass-border:rgba(180,160,255,0.22);
+    --shadow-glow:0 0 24px rgba(139,61,255,0.35);
+    --font-display: 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+    --font-body: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;width:100%;height:100%;
+    background:var(--navy-950);
+    font-family:var(--font-body);
+    color:var(--white);
+    overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none;
+  }
+
+  #app{
+    position:relative;
+    width:100vw;
+    height:100vh;
+    overflow:hidden;
+    background:
+      radial-gradient(ellipse 120% 70% at 50% 100%, rgba(139,61,255,0.18), transparent 60%),
+      linear-gradient(180deg, var(--navy-950) 0%, var(--navy-900) 45%, var(--navy-800) 100%);
+  }
+
+  /* ---------------- Background decor (shared across all screens) ---------------- */
+  #bg-layer{
+    position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden;
+  }
+  .star{
+    position:absolute; width:2px; height:2px; background:var(--white);
+    border-radius:50%; opacity:0.7;
+    animation:twinkle 3s ease-in-out infinite;
+  }
+  @keyframes twinkle{
+    0%,100%{opacity:0.15; transform:scale(1);}
+    50%{opacity:0.9; transform:scale(1.6);}
+  }
+  #sun{
+    position:absolute;
+    left:50%; top:14%;
+    width:min(26vw,220px); height:min(26vw,220px);
+    transform:translate(-50%,-50%);
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 35%, #fff3c4, var(--gold) 40%, var(--orange) 72%, var(--coral) 100%);
+    box-shadow:0 0 90px 20px rgba(255,152,56,0.45), 0 0 180px 60px rgba(255,93,122,0.18);
+    animation:sunPulse 6s ease-in-out infinite;
+  }
+  @keyframes sunPulse{
+    0%,100%{box-shadow:0 0 90px 20px rgba(255,152,56,0.45), 0 0 180px 60px rgba(255,93,122,0.18);}
+    50%{box-shadow:0 0 110px 30px rgba(255,152,56,0.6), 0 0 200px 70px rgba(255,93,122,0.28);}
+  }
+  .cloud{
+    position:absolute; background:rgba(180,160,255,0.08);
+    border-radius:50px; filter:blur(0.5px);
+  }
+  .cloud::before, .cloud::after{
+    content:''; position:absolute; background:inherit; border-radius:50%;
+  }
+  #skyline{
+    position:absolute; left:0; right:0; bottom:0; height:16%;
+    display:flex; align-items:flex-end; gap:2px;
+    z-index:1;
+  }
+  .building{
+    flex:1 1 auto; background:linear-gradient(180deg, var(--navy-700), var(--navy-950));
+    border-top:2px solid rgba(139,61,255,0.35);
+    position:relative;
+  }
+  .building span{
+    position:absolute; width:5px; height:5px; background:var(--gold);
+    opacity:0.7; box-shadow:0 0 6px var(--gold);
+  }
+
+  /* ---------------- Screens ---------------- */
+  .screen{
+    position:absolute; inset:0; z-index:5;
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .screen.active{ display:flex; animation:fadeIn .5s ease; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+
+  .glass-panel{
+    background:var(--glass);
+    border:1px solid var(--glass-border);
+    border-radius:20px;
+    backdrop-filter:blur(10px);
+    box-shadow:var(--shadow-glow), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  /* ---- Title / Kite Logo ---- */
+  .logo-kite{
+    width:64px; height:64px; position:relative; margin:0 auto 14px;
+    animation:floatKite 3s ease-in-out infinite;
+  }
+  @keyframes floatKite{ 0%,100%{transform:translateY(0) rotate(-3deg);} 50%{transform:translateY(-10px) rotate(3deg);} }
+  .logo-kite .diamond{
+    position:absolute; left:50%; top:50%; width:44px; height:44px;
+    background:linear-gradient(135deg, var(--coral), var(--purple) 55%, var(--cyan));
+    transform:translate(-50%,-50%) rotate(45deg);
+    border-radius:6px;
+    box-shadow:0 0 22px rgba(139,61,255,0.6);
+  }
+  .logo-kite .diamond::after{
+    content:''; position:absolute; inset:8px; border:2px solid rgba(255,255,255,0.5);
+    border-radius:4px;
+  }
+  .logo-kite .tail{
+    position:absolute; left:50%; top:82%; width:2px; height:26px; background:var(--gold);
+    transform:translateX(-50%); opacity:0.85;
+  }
+
+  h1.title{
+    font-family:var(--font-display);
+    font-size:clamp(2.2rem, 7vw, 4.2rem);
+    letter-spacing:4px;
+    margin:0 0 4px;
+    background:linear-gradient(90deg, var(--coral), var(--gold) 40%, var(--cyan) 80%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-align:center;
+    text-shadow:0 0 60px rgba(139,61,255,0.4);
+  }
+  .subtitle{
+    text-align:center; color:var(--purple-soft); letter-spacing:3px;
+    font-size:0.85rem; text-transform:uppercase; margin-bottom:28px; opacity:0.85;
+  }
+
+  .btn{
+    font-family:var(--font-display);
+    letter-spacing:1.5px;
+    font-size:0.95rem;
+    padding:14px 34px;
+    border-radius:14px;
+    border:1px solid var(--glass-border);
+    background:linear-gradient(135deg, rgba(139,61,255,0.35), rgba(46,230,214,0.18));
+    color:var(--white);
+    cursor:pointer;
+    text-transform:uppercase;
+    position:relative; overflow:hidden;
+    transition:transform .15s ease, box-shadow .2s ease, background .2s ease;
+    box-shadow:0 4px 18px rgba(139,61,255,0.25);
+  }
+  .btn:hover{ transform:translateY(-3px); box-shadow:0 8px 26px rgba(139,61,255,0.45); background:linear-gradient(135deg, rgba(139,61,255,0.55), rgba(46,230,214,0.3)); }
+  .btn:active{ transform:translateY(0) scale(0.97); }
+  .btn.primary{ background:linear-gradient(135deg, var(--coral), var(--orange)); border-color:transparent; box-shadow:0 4px 22px rgba(255,93,122,0.4);}
+  .btn.primary:hover{ box-shadow:0 8px 30px rgba(255,93,122,0.6); }
+  .btn.ghost{ background:transparent; }
+  .btn.small{ padding:9px 18px; font-size:0.75rem; border-radius:10px; }
+  .btn-row{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
+
+  .hint-line{
+    margin-top:26px; font-size:0.78rem; color:rgba(244,242,255,0.55); text-align:center; letter-spacing:0.5px;
+  }
+  .hint-line kbd{
+    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
+    border-radius:5px; padding:1px 6px; font-family:inherit;
+  }
+
+  /* ---- Start Screen extras ---- */
+  #screen-start .glass-panel{ padding:40px 46px; max-width:520px; width:100%; text-align:center; }
+  .best-score-chip{
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(255,210,63,0.1); border:1px solid rgba(255,210,63,0.35);
+    color:var(--gold); padding:6px 16px; border-radius:100px; font-size:0.8rem;
+    letter-spacing:1px; margin-bottom:18px;
+  }
+
+  /* ---- Level Select ---- */
+  #screen-levels{ padding-top:10px; }
+  .levels-header{ text-align:center; margin-bottom:18px; }
+  .levels-header h2{
+    font-family:var(--font-display); font-size:1.8rem; letter-spacing:2px; margin:0 0 4px;
+    color:var(--white);
+  }
+  .levels-header p{ color:var(--purple-soft); font-size:0.85rem; margin:0; }
+  .level-grid{
+    display:grid; grid-template-columns:repeat(5,minmax(120px,1fr));
+    gap:16px; max-width:1080px; width:100%; margin:18px 0;
+  }
+  .level-card{
+    position:relative; padding:18px 12px 16px; border-radius:16px; text-align:center;
+    cursor:pointer; transition:transform .2s ease, box-shadow .2s ease;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .level-card:hover:not(.locked){ transform:translateY(-6px); box-shadow:0 12px 30px rgba(139,61,255,0.4); }
+  .level-card .lv-num{
+    font-family:var(--font-display); font-size:1.6rem; font-weight:bold;
+    background:linear-gradient(135deg,var(--coral),var(--gold));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .level-card .lv-name{ font-size:0.75rem; letter-spacing:1px; text-transform:uppercase; color:var(--white); opacity:0.9; }
+  .level-card .lv-best{ font-size:0.68rem; color:var(--cyan); opacity:0.85; }
+  .level-card .lv-icon{ width:34px; height:34px; position:relative; margin:2px 0; }
+  .level-card.locked{ opacity:0.4; cursor:not-allowed; filter:grayscale(0.6); }
+  .level-card.locked::after{
+    content:'🔒'; position:absolute; top:8px; right:10px; font-size:0.85rem; opacity:0.8;
+  }
+  .level-card .diamond-mini{
+    position:absolute; left:50%; top:50%; width:22px; height:22px;
+    transform:translate(-50%,-50%) rotate(45deg); border-radius:4px;
+  }
+
+  /* ---------------- Gameplay Screen ---------------- */
+  #screen-game{ padding:0; justify-content:flex-start; }
+  #hud{
+    position:relative; z-index:20; width:100%;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    flex-wrap:wrap; padding:10px 14px; box-sizing:border-box;
+  }
+  .hud-chip{
+    display:flex; align-items:center; gap:6px;
+    padding:8px 14px; border-radius:12px;
+    font-size:0.78rem; letter-spacing:1px; text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .hud-chip .val{ font-weight:bold; font-family:var(--font-display); font-size:0.9rem; }
+  #hud-level .val{ color:var(--cyan); }
+  #hud-score .val{ color:var(--gold); }
+  #hud-lives .val{ color:var(--coral); letter-spacing:2px; }
+  #hud-time .val{ color:var(--orange); }
+  #hud-combo{ border-color:rgba(139,61,255,0.5); }
+  #hud-combo .val{ color:var(--purple-soft); }
+  #hud-combo.pop{ animation:comboPop .3s ease; }
+  @keyframes comboPop{ 0%{transform:scale(1);} 50%{transform:scale(1.25);} 100%{transform:scale(1);} }
+
+  #hud-exit{ margin-left:auto; }
+
+  #arena-wrap{
+    position:relative; flex:1; width:100%; z-index:10;
+    display:flex; align-items:center; justify-content:center;
+    padding:0 10px 10px;
+  }
+  #arena{
+    position:relative; width:100%; height:100%;
+    max-width:1100px;
+    border-radius:18px;
+    overflow:hidden;
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 100%, rgba(139,61,255,0.14), transparent 65%),
+      linear-gradient(180deg, rgba(8,10,28,0.2), rgba(8,10,28,0.55));
+    border:1px solid var(--glass-border);
+    box-shadow:inset 0 0 60px rgba(0,0,0,0.4);
+    cursor:none;
+    touch-action:none;
+  }
+
+  #objective-banner{
+    position:absolute; top:10px; left:50%; transform:translate(-50%,0);
+    padding:6px 18px; border-radius:100px; font-size:0.72rem; letter-spacing:1px;
+    text-transform:uppercase; color:var(--white); z-index:15; opacity:0.9;
+    white-space:nowrap;
+  }
+
+  #tutorial-hint{
+    position:absolute; bottom:16px; left:50%; transform:translate(-50%,0);
+    padding:10px 20px; border-radius:14px; font-size:0.78rem; text-align:center; z-index:16;
+    max-width:90%; color:var(--white); opacity:0.95;
+    animation:tutorialFloat 2.4s ease-in-out infinite;
+  }
+  @keyframes tutorialFloat{ 0%,100%{transform:translate(-50%,0);} 50%{transform:translate(-50%,-6px);} }
+
+  #wind-indicator{
+    position:absolute; top:10px; right:12px; z-index:16;
+    width:52px; height:52px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(11,14,42,0.55); border:1px solid var(--glass-border);
+  }
+  #wind-arrow{
+    width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent;
+    border-bottom:18px solid var(--cyan); filter:drop-shadow(0 0 6px var(--cyan));
+    transition:transform 0.6s ease;
+  }
+
+  /* Kite (player) */
+  #kite{
+    position:absolute; width:46px; height:46px; z-index:12;
+    pointer-events:none; will-change:transform;
+    filter:drop-shadow(0 0 10px rgba(139,61,255,0.55));
+  }
+  #kite .body{
+    position:absolute; left:50%; top:50%; width:34px; height:34px;
+    transform:translate(-50%,-50%) rotate(45deg);
+    background:linear-gradient(135deg, var(--coral), var(--purple) 50%, var(--cyan));
+    border-radius:6px;
+    border:2px solid rgba(255,255,255,0.55);
+  }
+  #kite .body::after{
+    content:''; position:absolute; inset:6px; border:1.5px dashed rgba(255,255,255,0.65); border-radius:4px;
+  }
+  #kite .tail{
+    position:absolute; left:50%; top:78%; width:2px; height:22px; background:var(--gold);
+    transform-origin:top center; opacity:0.9;
+  }
+  #kite .tail::after{
+    content:''; position:absolute; left:-3px; bottom:-6px; width:8px; height:8px;
+    background:var(--gold); border-radius:2px; transform:rotate(45deg);
+  }
+  #kite-string{
+    position:absolute; left:0; top:0; height:1px; background:rgba(244,242,255,0.35);
+    transform-origin:left center; z-index:11; pointer-events:none;
+  }
+
+  /* Generic entity classes drawn into #arena */
+  .ring{
+    position:absolute; border-radius:50%; z-index:8;
+    border:3px solid var(--cyan);
+    box-shadow:0 0 16px var(--cyan), inset 0 0 10px rgba(46,230,214,0.5);
+    animation:ringSpin 3s linear infinite;
+  }
+  @keyframes ringSpin{ from{ box-shadow:0 0 16px var(--cyan), inset 0 0 10px rgba(46,230,214,0.5);} 50%{ box-shadow:0 0 26px var(--gold), inset 0 0 14px rgba(255,210,63,0.6);} to{ box-shadow:0 0 16px var(--cyan), inset 0 0 10px rgba(46,230,214,0.5);} }
+
+  .obstacle{
+    position:absolute; border-radius:40% 60% 55% 45%/50% 45% 55% 50%; z-index:7;
+    background:rgba(180,160,255,0.16); border:1px solid rgba(180,160,255,0.3);
+    box-shadow:0 0 14px rgba(139,61,255,0.25);
+  }
+
+  .opp-kite{
+    position:absolute; width:30px; height:30px; z-index:9;
+  }
+  .opp-kite .body{
+    position:absolute; left:50%; top:50%; width:26px; height:26px;
+    transform:translate(-50%,-50%) rotate(45deg);
+    border-radius:5px; border:2px solid rgba(255,255,255,0.4);
+  }
+  .opp-string{
+    position:absolute; left:0; top:0; height:1px; background:rgba(255,93,122,0.4);
+    transform-origin:left center; z-index:9; pointer-events:none;
+  }
+
+  .particle{
+    position:absolute; width:5px; height:5px; border-radius:50%; z-index:14; pointer-events:none;
+  }
+
+  .score-popup{
+    position:absolute; z-index:17; font-family:var(--font-display); font-weight:bold;
+    font-size:1rem; color:var(--gold); pointer-events:none;
+    animation:popupFloat 0.9s ease forwards;
+    text-shadow:0 0 8px rgba(255,210,63,0.6);
+  }
+  @keyframes popupFloat{ 0%{opacity:1; transform:translateY(0) scale(0.8);} 20%{transform:translateY(-6px) scale(1.1);} 100%{opacity:0; transform:translateY(-46px) scale(1);} }
+
+  .wind-zone{
+    position:absolute; z-index:6; border-radius:14px;
+    background:repeating-linear-gradient(120deg, rgba(46,230,214,0.06) 0 10px, rgba(46,230,214,0.12) 10px 20px);
+    border:1px dashed rgba(46,230,214,0.35);
+    opacity:0; transition:opacity .4s ease;
+  }
+  .wind-zone.active{ opacity:1; }
+
+  #arena.shake{ animation:shakeAnim 0.35s ease; }
+  @keyframes shakeAnim{
+    0%,100%{ transform:translate(0,0); }
+    20%{ transform:translate(-6px,3px); }
+    40%{ transform:translate(6px,-3px); }
+    60%{ transform:translate(-4px,-2px); }
+    80%{ transform:translate(4px,2px); }
+  }
+
+  #hit-flash{
+    position:absolute; inset:0; background:rgba(255,93,122,0.25); z-index:19;
+    opacity:0; pointer-events:none;
+  }
+  #hit-flash.flash{ animation:flashAnim .4s ease; }
+  @keyframes flashAnim{ 0%{opacity:0.7;} 100%{opacity:0;} }
+
+  /* ---------------- Overlays ---------------- */
+  .overlay{
+    position:absolute; inset:0; z-index:30; display:none;
+    align-items:center; justify-content:center;
+    background:rgba(6,7,20,0.72); backdrop-filter:blur(4px);
+  }
+  .overlay.active{ display:flex; animation:fadeIn .35s ease; }
+  .overlay-card{
+    padding:38px 44px; max-width:460px; width:90%; text-align:center;
+  }
+  .overlay-card h2{
+    font-family:var(--font-display); font-size:1.9rem; letter-spacing:2px; margin:0 0 6px;
+  }
+  .overlay-card .big-icon{ font-size:2.6rem; margin-bottom:6px; }
+  .overlay-card .stat-line{
+    display:flex; justify-content:center; gap:22px; margin:18px 0; flex-wrap:wrap;
+  }
+  .overlay-card .stat{
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+  }
+  .overlay-card .stat .num{ font-family:var(--font-display); font-size:1.3rem; color:var(--gold); }
+  .overlay-card .stat .lbl{ font-size:0.65rem; letter-spacing:1px; text-transform:uppercase; color:rgba(244,242,255,0.6); }
+
+  #overlay-level-complete h2{ color:var(--cyan); text-shadow:0 0 20px rgba(46,230,214,0.5); }
+  #overlay-game-over h2{ color:var(--coral); text-shadow:0 0 20px rgba(255,93,122,0.5); }
+
+  /* Victory screen */
+  #screen-victory .glass-panel{ padding:44px 48px; max-width:560px; text-align:center; }
+  #screen-victory h2{
+    font-family:var(--font-display); font-size:2.2rem; letter-spacing:2px;
+    background:linear-gradient(90deg, var(--gold), var(--coral), var(--cyan));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    margin:6px 0;
+  }
+  .confetti-piece{
+    position:absolute; width:8px; height:8px; z-index:2;
+  }
+
+  /* Reset progress link */
+  .reset-link{
+    margin-top:14px; font-size:0.7rem; color:rgba(244,242,255,0.4);
+    text-decoration:underline; cursor:pointer; letter-spacing:0.5px;
+  }
+  .reset-link:hover{ color:var(--coral); }
+
+  /* ---------------- Responsiveness ---------------- */
+  @media (max-width:900px){
+    .level-grid{ grid-template-columns:repeat(3,1fr); }
+  }
+  @media (max-width:640px){
+    .level-grid{ grid-template-columns:repeat(2,1fr); gap:10px; }
+    h1.title{ font-size:2.2rem; }
+    .hud-chip{ font-size:0.65rem; padding:6px 9px; }
+    #screen-start .glass-panel, #screen-victory .glass-panel{ padding:28px 22px; }
+    .overlay-card{ padding:26px 20px; }
+  }
+  @media (max-width:420px){
+    .level-grid{ grid-template-columns:repeat(2,1fr); }
+    #hud-exit{ margin-left:0; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Shared decorative background -->
+  <div id="bg-layer">
+    <div id="sun"></div>
+    <div id="skyline"></div>
+  </div>
+
+  <!-- ============= START SCREEN ============= -->
+  <div class="screen active" id="screen-start">
+    <div class="glass-panel">
+      <div class="logo-kite"><div class="diamond"></div><div class="tail"></div></div>
+      <h1 class="title">KITE CLASH</h1>
+      <p class="subtitle">Festival of Winds</p>
+      <div class="best-score-chip">★ BEST SCORE&nbsp; <span id="global-best">0</span></div>
+      <div class="btn-row">
+        <button class="btn primary" id="btn-start">Start Game</button>
+        <button class="btn ghost" id="btn-continue">Continue</button>
+      </div>
+      <p class="hint-line">Guide your kite with <kbd>Mouse</kbd> or <kbd>Arrow Keys</kbd> / <kbd>WASD</kbd></p>
+      <div class="reset-link" id="btn-reset-start">Reset Progress</div>
+    </div>
+  </div>
+
+  <!-- ============= LEVEL SELECT ============= -->
+  <div class="screen" id="screen-levels">
+    <div class="levels-header">
+      <h2>Choose Your Flight</h2>
+      <p>Complete each level to unlock the next challenge</p>
+    </div>
+    <div class="level-grid" id="level-grid"></div>
+    <div class="btn-row">
+      <button class="btn ghost small" id="btn-levels-back">Back</button>
+    </div>
+  </div>
+
+  <!-- ============= GAMEPLAY SCREEN ============= -->
+  <div class="screen" id="screen-game">
+    <div id="hud">
+      <div class="hud-chip glass-panel" id="hud-level">LEVEL <span class="val">01</span></div>
+      <div class="hud-chip glass-panel" id="hud-score">SCORE <span class="val">0</span></div>
+      <div class="hud-chip glass-panel" id="hud-lives">LIVES <span class="val">♥♥♥</span></div>
+      <div class="hud-chip glass-panel" id="hud-time">TIME <span class="val">60</span></div>
+      <div class="hud-chip glass-panel" id="hud-combo">COMBO <span class="val">x1</span></div>
+      <button class="btn ghost small" id="hud-exit">Exit</button>
+    </div>
+    <div id="arena-wrap">
+      <div id="arena">
+        <div id="objective-banner" class="glass-panel">Collect the Wind Rings</div>
+        <div id="wind-indicator"><div id="wind-arrow"></div></div>
+        <div id="kite-string"></div>
+        <div id="kite">
+          <div class="body"></div>
+          <div class="tail"></div>
+        </div>
+        <div id="tutorial-hint" class="glass-panel">Move your kite through the glowing wind rings</div>
+        <div id="hit-flash"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============= OVERLAYS ============= -->
+  <div class="overlay" id="overlay-level-complete">
+    <div class="glass-panel overlay-card">
+      <div class="big-icon">🪁</div>
+      <h2>LEVEL COMPLETE</h2>
+      <p id="lc-message" style="opacity:0.75;font-size:0.85rem;">Great flying!</p>
+      <div class="stat-line">
+        <div class="stat"><div class="num" id="lc-score">0</div><div class="lbl">Score</div></div>
+        <div class="stat"><div class="num" id="lc-best">0</div><div class="lbl">Best</div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="btn-next-level">Next Level</button>
+        <button class="btn ghost" id="btn-lc-levels">Level Select</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay-game-over">
+    <div class="glass-panel overlay-card">
+      <div class="big-icon">💥</div>
+      <h2>KITE DOWN</h2>
+      <p style="opacity:0.75;font-size:0.85rem;">The wind got the better of you this time.</p>
+      <div class="stat-line">
+        <div class="stat"><div class="num" id="go-score">0</div><div class="lbl">Score</div></div>
+        <div class="stat"><div class="num" id="go-best">0</div><div class="lbl">Best</div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="btn-restart">Restart</button>
+        <button class="btn ghost" id="btn-go-levels">Level Select</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============= VICTORY SCREEN ============= -->
+  <div class="screen" id="screen-victory">
+    <div class="glass-panel">
+      <div class="logo-kite"><div class="diamond"></div><div class="tail"></div></div>
+      <h2>FESTIVAL CHAMPION</h2>
+      <p style="opacity:0.8;">You mastered every wind the festival could throw at you.</p>
+      <div class="stat-line">
+        <div class="stat"><div class="num" id="vic-score">0</div><div class="lbl">Final Score</div></div>
+        <div class="stat"><div class="num" id="vic-best">0</div><div class="lbl">Best Ever</div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="btn-play-again">Play Again</button>
+        <button class="btn ghost" id="btn-vic-levels">Level Select</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* =========================================================================
+   KITE CLASH — Game Engine
+   Organized into clear sections per the spec:
+   init, level loading, player movement, enemy movement, collisions,
+   scoring, combo, timer, lives, level completion, unlocking, storage,
+   HUD rendering, reset.
+   ========================================================================= */
+
+/* ---------------------------- CONSTANTS -------------------------------- */
+const COLORS = {
+  ring:'#2ee6d6', coral:'#ff5d7a', purple:'#8b3dff', orange:'#ff9838', gold:'#ffd23f', cyan:'#2ee6d6'
+};
+const STORAGE_KEY = 'kiteClash.save.v1';
+const KITE_RADIUS = 20;
+const RING_RADIUS = 26;
+
+const LEVELS = [
+  { id:1, name:'First Flight',    time:45, ringsNeeded:8,  lives:3, obstacles:0, opponents:0, wind:false },
+  { id:2, name:'Crowded Skies',   time:50, ringsNeeded:10, lives:3, obstacles:4, opponents:0, wind:false },
+  { id:3, name:'Cut the String',  time:55, ringsNeeded:0,  lives:3, obstacles:2, opponents:3, wind:false, targetCuts:5 },
+  { id:4, name:'Wild Wind',       time:55, ringsNeeded:6,  lives:3, obstacles:3, opponents:2, wind:true, targetCuts:3 },
+  { id:5, name:'Festival Finale', time:65, ringsNeeded:8,  lives:3, obstacles:4, opponents:3, wind:true, targetCuts:6 },
+];
+
+/* ---------------------------- STATE ------------------------------------ */
+let save = null;               // persisted progress
+let currentLevel = 1;          // level currently loaded
+let game = null;               // live gameplay state, reset per attempt
+let rafId = null;
+let lastTime = 0;
+let keys = {};
+let pointer = { x:0, y:0, active:false };
+
+/* ---------------------------- DOM REFS ---------------------------------- */
+const el = (id) => document.getElementById(id);
+const screens = {
+  start: el('screen-start'),
+  levels: el('screen-levels'),
+  game: el('screen-game'),
+  victory: el('screen-victory'),
+};
+const overlays = {
+  levelComplete: el('overlay-level-complete'),
+  gameOver: el('overlay-game-over'),
+};
+const arena = el('arena');
+const kiteEl = el('kite');
+const kiteStringEl = el('kite-string');
+const hitFlashEl = el('hit-flash');
+const tutorialHintEl = el('tutorial-hint');
+const objectiveBannerEl = el('objective-banner');
+const windIndicatorEl = el('wind-indicator');
+const windArrowEl = el('wind-arrow');
+
+/* =========================================================================
+   STORAGE (save / load progress)
+   ========================================================================= */
+function loadProgress(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      save = JSON.parse(raw);
+    }
+  }catch(e){ /* ignore corrupt storage */ }
+  if(!save){
+    save = { unlockedLevel:1, bestScores:{1:0,2:0,3:0,4:0,5:0}, bestFinalScore:0 };
+  }
+  // ensure shape
+  save.bestScores = save.bestScores || {1:0,2:0,3:0,4:0,5:0};
+  for(let i=1;i<=5;i++){ if(save.bestScores[i]===undefined) save.bestScores[i]=0; }
+  if(save.unlockedLevel===undefined) save.unlockedLevel = 1;
+  if(save.bestFinalScore===undefined) save.bestFinalScore = 0;
+}
+
+function saveProgress(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
+  }catch(e){ /* storage unavailable, fail silently */ }
+}
+
+function resetProgress(){
+  save = { unlockedLevel:1, bestScores:{1:0,2:0,3:0,4:0,5:0}, bestFinalScore:0 };
+  saveProgress();
+  renderLevelGrid();
+  el('global-best').textContent = 0;
+}
+
+/* =========================================================================
+   INITIALIZATION
+   ========================================================================= */
+function initGame(){
+  loadProgress();
+  buildBackgroundDecor();
+  renderLevelGrid();
+  el('global-best').textContent = save.bestFinalScore;
+  bindUI();
+  bindControls();
+}
+
+function buildBackgroundDecor(){
+  // stars
+  const bg = el('bg-layer');
+  for(let i=0;i<60;i++){
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.left = Math.random()*100 + '%';
+    s.style.top = Math.random()*70 + '%';
+    s.style.animationDelay = (Math.random()*3).toFixed(2)+'s';
+    bg.appendChild(s);
+  }
+  // clouds
+  for(let i=0;i<5;i++){
+    const c = document.createElement('div');
+    c.className = 'cloud';
+    const w = 80 + Math.random()*100;
+    c.style.width = w+'px';
+    c.style.height = (w*0.35)+'px';
+    c.style.left = Math.random()*90+'%';
+    c.style.top = (10+Math.random()*35)+'%';
+    c.style.opacity = 0.5 + Math.random()*0.3;
+    bg.appendChild(c);
+  }
+  // skyline buildings
+  const skyline = el('skyline');
+  const buildingCount = 22;
+  for(let i=0;i<buildingCount;i++){
+    const b = document.createElement('div');
+    b.className = 'building';
+    b.style.height = (30+Math.random()*70)+'%';
+    // random window lights
+    const winCount = 1 + Math.floor(Math.random()*3);
+    for(let w=0; w<winCount; w++){
+      const win = document.createElement('span');
+      win.style.left = (10+Math.random()*70)+'%';
+      win.style.top = (10+Math.random()*70)+'%';
+      b.appendChild(win);
+    }
+    skyline.appendChild(b);
+  }
+}
+
+/* =========================================================================
+   UI NAVIGATION
+   ========================================================================= */
+function showScreen(name){
+  Object.values(screens).forEach(s=>s.classList.remove('active'));
+  screens[name].classList.add('active');
+}
+function showOverlay(name){
+  overlays[name].classList.add('active');
+}
+function hideOverlays(){
+  Object.values(overlays).forEach(o=>o.classList.remove('active'));
+}
+
+function bindUI(){
+  el('btn-start').addEventListener('click', ()=>{ showScreen('levels'); });
+  el('btn-continue').addEventListener('click', ()=>{
+    showScreen('levels');
+  });
+  el('btn-levels-back').addEventListener('click', ()=> showScreen('start'));
+  el('btn-reset-start').addEventListener('click', ()=>{
+    if(confirm('Reset all progress? This cannot be undone.')) resetProgress();
+  });
+
+  el('hud-exit').addEventListener('click', ()=>{
+    stopGameLoop();
+    showScreen('levels');
+  });
+
+  el('btn-next-level').addEventListener('click', ()=>{
+    hideOverlays();
+    const next = currentLevel+1;
+    if(next>5){ goVictory(); }
+    else { loadLevel(next); startLevel(); }
+  });
+  el('btn-lc-levels').addEventListener('click', ()=>{ hideOverlays(); stopGameLoop(); showScreen('levels'); });
+
+  el('btn-restart').addEventListener('click', ()=>{
+    hideOverlays();
+    loadLevel(currentLevel);
+    startLevel();
+  });
+  el('btn-go-levels').addEventListener('click', ()=>{ hideOverlays(); stopGameLoop(); showScreen('levels'); });
+
+  el('btn-play-again').addEventListener('click', ()=>{ loadLevel(1); startLevel(); });
+  el('btn-vic-levels').addEventListener('click', ()=> showScreen('levels'));
+}
+
+function renderLevelGrid(){
+  const grid = el('level-grid');
+  grid.innerHTML = '';
+  const gradients = [
+    ['#2ee6d6','#8b3dff'], ['#ff9838','#ff5d7a'], ['#8b3dff','#ff5d7a'],
+    ['#ffd23f','#ff9838'], ['#ff5d7a','#2ee6d6']
+  ];
+  LEVELS.forEach((lvl, idx)=>{
+    const unlocked = lvl.id <= save.unlockedLevel;
+    const card = document.createElement('div');
+    card.className = 'glass-panel level-card' + (unlocked ? '' : ' locked');
+    const g = gradients[idx];
+    card.innerHTML = `
+      <div class="lv-icon"><div class="diamond-mini" style="background:linear-gradient(135deg, ${g[0]}, ${g[1]}); box-shadow:0 0 14px ${g[0]}88;"></div></div>
+      <div class="lv-num">0${lvl.id}</div>
+      <div class="lv-name">${lvl.name}</div>
+      <div class="lv-best">BEST ${save.bestScores[lvl.id]||0}</div>
+    `;
+    if(unlocked){
+      card.addEventListener('click', ()=>{ loadLevel(lvl.id); startLevel(); });
+    }
+    grid.appendChild(card);
+  });
+}
+
+/* =========================================================================
+   INPUT HANDLING
+   ========================================================================= */
+function bindControls(){
+  window.addEventListener('keydown', (e)=>{
+    keys[e.key.toLowerCase()] = true;
+  });
+  window.addEventListener('keyup', (e)=>{
+    keys[e.key.toLowerCase()] = false;
+  });
+  arena.addEventListener('mousemove', (e)=>{
+    const rect = arena.getBoundingClientRect();
+    pointer.x = e.clientX - rect.left;
+    pointer.y = e.clientY - rect.top;
+    pointer.active = true;
+  });
+  arena.addEventListener('mouseleave', ()=>{ pointer.active = false; });
+  arena.addEventListener('touchmove', (e)=>{
+    const rect = arena.getBoundingClientRect();
+    const t = e.touches[0];
+    pointer.x = t.clientX - rect.left;
+    pointer.y = t.clientY - rect.top;
+    pointer.active = true;
+    e.preventDefault();
+  }, {passive:false});
+}
+
+/* =========================================================================
+   LEVEL LOADING
+   ========================================================================= */
+function loadLevel(levelNum){
+  currentLevel = levelNum;
+  const cfg = LEVELS[levelNum-1];
+
+  const w = arena.clientWidth || 800;
+  const h = arena.clientHeight || 500;
+
+  game = {
+    cfg: cfg,
+    w, h,
+    kite: { x:w/2, y:h/2, vx:0, vy:0, angle:0 },
+    score:0,
+    lives: cfg.lives,
+    timeLeft: cfg.time,
+    combo:1,
+    comboProgress:0,
+    ringsCollected:0,
+    cutsMade:0,
+    rings:[],
+    obstacles:[],
+    opponents:[],
+    windZones:[],
+    particles:[],
+    popups:[],
+    windAngle: Math.random()*Math.PI*2,
+    windTimer: 4,
+    windForce:{x:0,y:0},
+    running:false,
+    invuln:0,
+    ended:false,
+    spawnTimer:0,
+  };
+
+  clearEntityDom();
+  spawnInitialEntities();
+  updateObjectiveBanner();
+  renderHUD();
+
+  tutorialHintEl.style.display = (levelNum===1) ? 'block' : 'none';
+  windIndicatorEl.style.display = cfg.wind ? 'flex' : 'none';
+
+  showScreen('game');
+}
+
+function clearEntityDom(){
+  arena.querySelectorAll('.ring, .obstacle, .opp-kite, .opp-string, .particle, .score-popup, .wind-zone').forEach(n=>n.remove());
+}
+
+function updateObjectiveBanner(){
+  const cfg = game.cfg;
+  let text = '';
+  if(cfg.ringsNeeded>0 && cfg.targetCuts) text = `Collect ${cfg.ringsNeeded} rings & cut ${cfg.targetCuts} strings`;
+  else if(cfg.ringsNeeded>0) text = `Collect ${cfg.ringsNeeded} Wind Rings`;
+  else if(cfg.targetCuts) text = `Cut ${cfg.targetCuts} opponent strings`;
+  objectiveBannerEl.textContent = text;
+}
+
+function spawnInitialEntities(){
+  const cfg = game.cfg;
+  // wind rings
+  const ringCount = Math.max(cfg.ringsNeeded, 5);
+  for(let i=0;i<ringCount;i++) spawnRing();
+  // obstacles
+  for(let i=0;i<cfg.obstacles;i++) spawnObstacle();
+  // opponents
+  for(let i=0;i<cfg.opponents;i++) spawnOpponent();
+  // wind zones
+  if(cfg.wind){
+    for(let i=0;i<3;i++) spawnWindZone();
+  }
+}
+
+function randRange(a,b){ return a + Math.random()*(b-a); }
+
+function spawnRing(){
+  const margin = 50;
+  const r = {
+    x: randRange(margin, game.w-margin),
+    y: randRange(margin+40, game.h-margin),
+    size: RING_RADIUS*2,
+    el: document.createElement('div'),
+  };
+  r.el.className = 'ring';
+  r.el.style.width = r.size+'px';
+  r.el.style.height = r.size+'px';
+  positionEntity(r.el, r.x - RING_RADIUS, r.y - RING_RADIUS);
+  arena.appendChild(r.el);
+  game.rings.push(r);
+}
+
+function spawnObstacle(){
+  const size = randRange(34,54);
+  const o = {
+    x: randRange(0, game.w-size),
+    y: randRange(60, game.h-size),
+    w:size, h:size*0.7,
+    vx: randRange(40,90) * (Math.random()<0.5?-1:1),
+    vy: randRange(-20,20),
+    el: document.createElement('div'),
+  };
+  o.el.className = 'obstacle';
+  o.el.style.width = o.w+'px';
+  o.el.style.height = o.h+'px';
+  arena.appendChild(o.el);
+  game.obstacles.push(o);
+}
+
+function spawnOpponent(){
+  const anchorX = randRange(60, game.w-60);
+  const size = 26;
+  const o = {
+    x: anchorX + randRange(-40,40),
+    y: randRange(80, game.h*0.6),
+    anchorX: anchorX,
+    anchorY: -6,
+    vx: randRange(-50,50),
+    vy: randRange(20,50),
+    dirTimer: randRange(1,2.4),
+    alive:true,
+    hue: ['#ff5d7a','#ff9838','#ffd23f','#2ee6d6'][Math.floor(Math.random()*4)],
+    kiteEl: document.createElement('div'),
+    stringEl: document.createElement('div'),
+  };
+  o.kiteEl.className = 'opp-kite';
+  o.kiteEl.innerHTML = `<div class="body" style="background:linear-gradient(135deg, ${o.hue}, var(--navy-700)); box-shadow:0 0 10px ${o.hue}aa;"></div>`;
+  o.stringEl.className = 'opp-string';
+  arena.appendChild(o.stringEl);
+  arena.appendChild(o.kiteEl);
+  game.opponents.push(o);
+}
+
+function spawnWindZone(){
+  const w = randRange(140,220), h = randRange(100,160);
+  const z = {
+    x: randRange(0, game.w-w), y: randRange(0, game.h-h), w, h,
+    active:false, timer: randRange(2,5),
+    el: document.createElement('div'),
+  };
+  z.el.className = 'wind-zone';
+  z.el.style.width = w+'px';
+  z.el.style.height = h+'px';
+  positionEntity(z.el, z.x, z.y);
+  arena.appendChild(z.el);
+  game.windZones.push(z);
+}
+
+function positionEntity(node, x, y){
+  node.style.transform = `translate(${x}px, ${y}px)`;
+}
+
+/* =========================================================================
+   START / STOP GAME LOOP
+   ========================================================================= */
+function startLevel(){
+  hideOverlays();
+  game.running = true;
+  lastTime = performance.now();
+  if(rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(loop);
+}
+
+function stopGameLoop(){
+  if(rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  if(game) game.running = false;
+}
+
+function loop(now){
+  if(!game || !game.running) return;
+  let dt = (now - lastTime)/1000;
+  if(dt>0.05) dt = 0.05; // clamp for tab-switch lag
+  lastTime = now;
+
+  updatePlayerMovement(dt);
+  updateEnemyMovement(dt);
+  updateObstacles(dt);
+  updateWind(dt);
+  checkCollisions();
+  updateParticles(dt);
+  updateTimer(dt);
+  renderHUD();
+
+  if(game.running) rafId = requestAnimationFrame(loop);
+}
+
+/* =========================================================================
+   PLAYER MOVEMENT
+   ========================================================================= */
+function updatePlayerMovement(dt){
+  const k = game.kite;
+  const speed = 320;
+  let dx = 0, dy = 0;
+
+  if(pointer.active){
+    dx = pointer.x - k.x;
+    dy = pointer.y - k.y;
+    const dist = Math.hypot(dx,dy);
+    if(dist>2){
+      const pull = Math.min(dist, speed*dt*2.4);
+      k.vx = (dx/dist) * pull * (1/dt||1);
+      k.vy = (dy/dist) * pull * (1/dt||1);
+      k.x += (dx/dist) * pull;
+      k.y += (dy/dist) * pull;
+    }
+  } else {
+    let ix=0, iy=0;
+    if(keys['arrowleft']||keys['a']) ix -=1;
+    if(keys['arrowright']||keys['d']) ix +=1;
+    if(keys['arrowup']||keys['w']) iy -=1;
+    if(keys['arrowdown']||keys['s']) iy +=1;
+    const len = Math.hypot(ix,iy)||1;
+    k.vx = (ix/len)*speed;
+    k.vy = (iy/len)*speed;
+    k.x += k.vx*dt;
+    k.y += k.vy*dt;
+  }
+
+  // apply wind push
+  if(game.cfg.wind){
+    k.x += game.windForce.x*dt;
+    k.y += game.windForce.y*dt;
+  }
+
+  // clamp to arena
+  k.x = Math.max(KITE_RADIUS, Math.min(game.w-KITE_RADIUS, k.x));
+  k.y = Math.max(KITE_RADIUS, Math.min(game.h-KITE_RADIUS, k.y));
+
+  // angle from velocity for tail sway
+  const moveAngle = Math.atan2(k.vy, k.vx);
+  k.angle += ( (moveAngle*180/Math.PI) - k.angle ) * Math.min(1, dt*6);
+
+  renderKite();
+}
+
+function renderKite(){
+  const k = game.kite;
+  positionEntity(kiteEl, k.x - 23, k.y - 23);
+  const tail = kiteEl.querySelector('.tail');
+  const sway = Math.sin(performance.now()/220) * 12;
+  tail.style.transform = `translateX(-50%) rotate(${sway}deg)`;
+
+  // string anchored at bottom-center of arena
+  const anchorX = game.w/2, anchorY = game.h + 10;
+  const ddx = k.x - anchorX, ddy = k.y - anchorY;
+  const dist = Math.hypot(ddx,ddy);
+  const angle = Math.atan2(ddy,ddx)*180/Math.PI;
+  kiteStringEl.style.width = dist+'px';
+  kiteStringEl.style.transform = `translate(${anchorX}px, ${anchorY}px) rotate(${angle}deg)`;
+}
+
+/* =========================================================================
+   ENEMY / OPPONENT MOVEMENT
+   ========================================================================= */
+function updateEnemyMovement(dt){
+  game.opponents.forEach(o=>{
+    if(!o.alive) return;
+    o.dirTimer -= dt;
+    if(o.dirTimer<=0){
+      o.vx = randRange(-60,60);
+      o.vy = randRange(-40,40);
+      o.dirTimer = randRange(1.2,2.6);
+    }
+    o.x += o.vx*dt;
+    o.y += o.vy*dt;
+    o.x = Math.max(20, Math.min(game.w-20, o.x));
+    o.y = Math.max(20, Math.min(game.h*0.75, o.y));
+
+    positionEntity(o.kiteEl, o.x-13, o.y-13);
+
+    const ddx = o.x - o.anchorX, ddy = o.y - o.anchorY;
+    const dist = Math.hypot(ddx,ddy);
+    const angle = Math.atan2(ddy,ddx)*180/Math.PI;
+    o.stringEl.style.width = dist+'px';
+    o.stringEl.style.transform = `translate(${o.anchorX}px, ${o.anchorY}px) rotate(${angle}deg)`;
+  });
+}
+
+function updateObstacles(dt){
+  game.obstacles.forEach(o=>{
+    o.x += o.vx*dt;
+    o.y += o.vy*dt;
+    if(o.x<0 || o.x>game.w-o.w) o.vx *= -1;
+    if(o.y<40 || o.y>game.h-o.h) o.vy *= -1;
+    o.x = Math.max(0, Math.min(game.w-o.w, o.x));
+    o.y = Math.max(40, Math.min(game.h-o.h, o.y));
+    positionEntity(o.el, o.x, o.y);
+  });
+}
+
+/* =========================================================================
+   WIND SYSTEM (levels 4 & 5)
+   ========================================================================= */
+function updateWind(dt){
+  if(!game.cfg.wind) return;
+  game.windTimer -= dt;
+  if(game.windTimer<=0){
+    game.windAngle = Math.random()*Math.PI*2;
+    game.windTimer = randRange(3.5,6);
+  }
+  const strength = 70;
+  game.windForce.x = Math.cos(game.windAngle)*strength;
+  game.windForce.y = Math.sin(game.windAngle)*strength;
+  windArrowEl.style.transform = `rotate(${(game.windAngle*180/Math.PI)+90}deg)`;
+
+  game.windZones.forEach(z=>{
+    z.timer -= dt;
+    if(z.timer<=0){
+      z.active = !z.active;
+      z.timer = randRange(2,5);
+      z.el.classList.toggle('active', z.active);
+    }
+  });
+}
+
+/* =========================================================================
+   PARTICLES & SCORE POPUPS
+   ========================================================================= */
+function spawnParticles(x,y,color,count){
+  count = count||10;
+  for(let i=0;i<count;i++){
+    const p = {
+      x, y,
+      vx: randRange(-120,120),
+      vy: randRange(-120,120),
+      life: randRange(0.4,0.8),
+      maxLife:0,
+      el: document.createElement('div'),
+    };
+    p.maxLife = p.life;
+    p.el.className = 'particle';
+    p.el.style.background = color;
+    p.el.style.boxShadow = `0 0 6px ${color}`;
+    arena.appendChild(p.el);
+    game.particles.push(p);
+  }
+}
+
+function spawnScorePopup(x,y,text){
+  const pop = document.createElement('div');
+  pop.className = 'score-popup';
+  pop.textContent = text;
+  positionEntity(pop, x-10, y-10);
+  arena.appendChild(pop);
+  setTimeout(()=>pop.remove(), 950);
+}
+
+function updateParticles(dt){
+  for(let i=game.particles.length-1;i>=0;i--){
+    const p = game.particles[i];
+    p.life -= dt;
+    if(p.life<=0){ p.el.remove(); game.particles.splice(i,1); continue; }
+    p.x += p.vx*dt; p.y += p.vy*dt;
+    p.vx *= 0.94; p.vy *= 0.94;
+    p.el.style.opacity = Math.max(0, p.life/p.maxLife);
+    positionEntity(p.el, p.x, p.y);
+  }
+}
+
+function screenShake(){
+  arena.classList.remove('shake');
+  void arena.offsetWidth; // restart animation
+  arena.classList.add('shake');
+}
+function hitFlash(){
+  hitFlashEl.classList.remove('flash');
+  void hitFlashEl.offsetWidth;
+  hitFlashEl.classList.add('flash');
+}
+
+/* =========================================================================
+   COLLISION DETECTION
+   ========================================================================= */
+function dist2(ax,ay,bx,by){ return Math.hypot(ax-bx, ay-by); }
+
+// distance from point p to segment ab
+function pointToSegmentDist(px,py, ax,ay, bx,by){
+  const abx = bx-ax, aby = by-ay;
+  const apx = px-ax, apy = py-ay;
+  const abLen2 = abx*abx+aby*aby || 1;
+  let t = (apx*abx + apy*aby)/abLen2;
+  t = Math.max(0, Math.min(1, t));
+  const cx = ax + abx*t, cy = ay + aby*t;
+  return Math.hypot(px-cx, py-cy);
+}
+
+function checkCollisions(){
+  const k = game.kite;
+  if(game.invuln>0) game.invuln -= 1/60;
+
+  // rings
+  for(let i=game.rings.length-1;i>=0;i--){
+    const r = game.rings[i];
+    if(dist2(k.x,k.y,r.x,r.y) < KITE_RADIUS+RING_RADIUS-8){
+      collectRing(r,i);
+    }
+  }
+
+  // obstacles
+  if(game.invuln<=0){
+    for(const o of game.obstacles){
+      const ox = o.x+o.w/2, oy = o.y+o.h/2;
+      if(dist2(k.x,k.y,ox,oy) < KITE_RADIUS + Math.min(o.w,o.h)/2 - 4){
+        hitObstacle();
+        break;
+      }
+    }
+  }
+
+  // opponent kites body-to-body (neutral collision in level 2/ wandering kites) & string cutting
+  for(const o of game.opponents){
+    if(!o.alive) continue;
+    const distToString = pointToSegmentDist(k.x,k.y, o.anchorX,o.anchorY, o.x,o.y);
+    if(distToString < 14){
+      cutOpponentString(o);
+    }
+  }
+}
+
+function collectRing(r, idx){
+  spawnParticles(r.x, r.y, '#2ee6d6', 12);
+  spawnScorePopup(r.x, r.y, '+' + (10*game.combo));
+  addScore(10*game.combo);
+  registerSuccess();
+  game.ringsCollected++;
+  r.el.remove();
+  game.rings.splice(idx,1);
+  // respawn a fresh ring to keep arena lively (levels with target counts)
+  if(game.ringsCollected < 999 && game.rings.length < 6) spawnRing();
+  checkLevelObjective();
+}
+
+function hitObstacle(){
+  loseLife();
+  spawnParticles(game.kite.x, game.kite.y, '#ff5d7a', 16);
+  hitFlash();
+  screenShake();
+  registerFailure();
+  game.invuln = 1.2;
+}
+
+function cutOpponentString(o){
+  o.alive = false;
+  spawnParticles(o.x, o.y, o.hue, 18);
+  spawnScorePopup(o.x, o.y, '+' + (25*game.combo));
+  addScore(25*game.combo);
+  registerSuccess();
+  game.cutsMade++;
+  screenShake();
+
+  o.kiteEl.style.transition = 'transform .5s ease, opacity .5s ease';
+  o.kiteEl.style.opacity = '0';
+  o.stringEl.style.transition = 'opacity .3s ease';
+  o.stringEl.style.opacity = '0';
+  const fallX = o.x + randRange(-30,30), fallY = o.y + 120;
+  positionEntity(o.kiteEl, fallX-13, fallY-13);
+
+  setTimeout(()=>{
+    o.kiteEl.remove();
+    o.stringEl.remove();
+    const idx = game.opponents.indexOf(o);
+    if(idx>=0) game.opponents.splice(idx,1);
+    if(game.running) spawnOpponent();
+  }, 500);
+
+  checkLevelObjective();
+}
+
+/* =========================================================================
+   SCORING & COMBO
+   ========================================================================= */
+function addScore(points){
+  game.score += points;
+}
+
+function registerSuccess(){
+  game.comboProgress++;
+  const newCombo = Math.min(6, 1 + Math.floor(game.comboProgress/2));
+  if(newCombo !== game.combo){
+    game.combo = newCombo;
+    const chip = el('hud-combo');
+    chip.classList.remove('pop'); void chip.offsetWidth; chip.classList.add('pop');
+  }
+}
+
+function registerFailure(){
+  game.combo = 1;
+  game.comboProgress = 0;
+}
+
+/* =========================================================================
+   LIVES
+   ========================================================================= */
+function loseLife(){
+  game.lives--;
+  if(game.lives<=0){
+    endLevel(false);
+  }
+}
+
+/* =========================================================================
+   TIMER
+   ========================================================================= */
+function updateTimer(dt){
+  game.timeLeft -= dt;
+  if(game.timeLeft<=0){
+    game.timeLeft = 0;
+    // time's up: success if objective met, else fail
+    if(objectiveMet()) endLevel(true);
+    else endLevel(false);
+  }
+}
+
+/* =========================================================================
+   OBJECTIVES / LEVEL COMPLETION
+   ========================================================================= */
+function objectiveMet(){
+  const cfg = game.cfg;
+  const ringsOk = cfg.ringsNeeded===0 || game.ringsCollected>=cfg.ringsNeeded;
+  const cutsOk = !cfg.targetCuts || game.cutsMade>=cfg.targetCuts;
+  return ringsOk && cutsOk;
+}
+
+function checkLevelObjective(){
+  if(objectiveMet() && game.cfg.id !== 5){
+    // levels 1-4 can finish early once objective is met
+    endLevel(true);
+  } else if(objectiveMet() && game.cfg.id===5){
+    // Level 5 is score attack: keep playing till timer ends, just flag ready
+    game._finaleReady = true;
+  }
+}
+
+function endLevel(success){
+  if(game.ended) return;
+  game.ended = true;
+  game.running = false;
+  stopGameLoop();
+
+  const cfg = game.cfg;
+  const best = save.bestScores[cfg.id] || 0;
+  if(game.score > best) save.bestScores[cfg.id] = game.score;
+
+  if(success){
+    unlockLevel(cfg.id+1);
+    if(cfg.id===5){
+      if(game.score > save.bestFinalScore) save.bestFinalScore = game.score;
+      saveProgress();
+      goVictory();
+      return;
+    }
+    saveProgress();
+    el('lc-score').textContent = game.score;
+    el('lc-best').textContent = save.bestScores[cfg.id];
+    el('lc-message').textContent = pickCompleteMessage(cfg.id);
+    showOverlay('levelComplete');
+  } else {
+    saveProgress();
+    el('go-score').textContent = game.score;
+    el('go-best').textContent = save.bestScores[cfg.id];
+    showOverlay('gameOver');
+  }
+}
+
+function pickCompleteMessage(levelId){
+  const msgs = {
+    1:'You caught the wind! Onward to crowded skies.',
+    2:'Deft flying through the chaos!',
+    3:'Strings cut clean — a true festival rival.',
+    4:'You rode the wild wind like a champion.',
+  };
+  return msgs[levelId] || 'Great flying!';
+}
+
+function unlockLevel(levelId){
+  if(levelId<=5 && levelId > save.unlockedLevel){
+    save.unlockedLevel = levelId;
+  }
+}
+
+function goVictory(){
+  showScreen('victory');
+  el('vic-score').textContent = game.score;
+  el('vic-best').textContent = save.bestFinalScore;
+  el('global-best').textContent = save.bestFinalScore;
+  renderLevelGrid();
+  launchConfetti();
+}
+
+function launchConfetti(){
+  const panel = document.querySelector('#screen-victory .glass-panel');
+  const colors = ['#ff5d7a','#ff9838','#ffd23f','#2ee6d6','#8b3dff'];
+  for(let i=0;i<40;i++){
+    const c = document.createElement('div');
+    c.className = 'confetti-piece';
+    c.style.background = colors[Math.floor(Math.random()*colors.length)];
+    c.style.left = Math.random()*100+'%';
+    c.style.top = '-10px';
+    c.style.borderRadius = Math.random()<0.5 ? '50%' : '2px';
+    c.style.transition = `transform ${2+Math.random()*2}s ease-in, opacity 2.5s ease-in`;
+    document.body.appendChild(c);
+    c.getBoundingClientRect();
+    requestAnimationFrame(()=>{
+      c.style.transform = `translateY(${window.innerHeight+40}px) rotate(${randRange(0,720)}deg)`;
+      c.style.opacity='0.2';
+    });
+    setTimeout(()=>c.remove(), 4200);
+  }
+}
+
+/* =========================================================================
+   HUD RENDERING
+   ========================================================================= */
+function renderHUD(){
+  if(!game) return;
+  el('hud-level').querySelector('.val').textContent = String(currentLevel).padStart(2,'0');
+  el('hud-score').querySelector('.val').textContent = game.score;
+  el('hud-lives').querySelector('.val').textContent = '♥'.repeat(Math.max(0,game.lives));
+  el('hud-time').querySelector('.val').textContent = Math.ceil(game.timeLeft);
+  el('hud-combo').querySelector('.val').textContent = 'x'+game.combo;
+}
+
+/* =========================================================================
+   RESIZE HANDLING
+   ========================================================================= */
+window.addEventListener('resize', ()=>{
+  if(game && screens.game.classList.contains('active')){
+    game.w = arena.clientWidth;
+    game.h = arena.clientHeight;
+  }
+});
+
+/* =========================================================================
+   BOOT
+   ========================================================================= */
+initGame();
+
+})();
+</script>
+</body>
+</html>
