@@ -193,6 +193,26 @@
     letter-spacing:1px; margin-bottom:18px;
   }
 
+  /* ---- How to Play panel ---- */
+  .howto-panel{
+    margin-top:22px; padding:14px 18px; border-radius:14px;
+    background:rgba(46,230,214,0.06); border:1px solid rgba(46,230,214,0.22);
+    text-align:left;
+  }
+  .howto-panel .howto-title{
+    font-family:var(--font-display); font-size:0.75rem; letter-spacing:1.5px;
+    text-transform:uppercase; color:var(--cyan); margin-bottom:8px; text-align:center;
+  }
+  .howto-panel .howto-row{
+    display:flex; align-items:center; gap:10px; font-size:0.78rem;
+    color:rgba(244,242,255,0.8); padding:4px 0;
+  }
+  .howto-panel .howto-row kbd{
+    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2);
+    border-radius:5px; padding:2px 7px; font-family:inherit; font-size:0.72rem;
+    color:var(--white); flex-shrink:0; min-width:70px; text-align:center;
+  }
+
   /* ---- Level Select ---- */
   #screen-levels{ padding-top:10px; }
   .levels-header{ text-align:center; margin-bottom:18px; }
@@ -276,7 +296,17 @@
     position:absolute; top:10px; left:50%; transform:translate(-50%,0);
     padding:6px 18px; border-radius:100px; font-size:0.72rem; letter-spacing:1px;
     text-transform:uppercase; color:var(--white); z-index:15; opacity:0.9;
-    white-space:nowrap;
+    white-space:nowrap; display:flex; flex-direction:column; align-items:center; gap:5px;
+  }
+  #objective-progress-track{
+    width:140px; height:5px; border-radius:100px;
+    background:rgba(244,242,255,0.15); overflow:hidden;
+  }
+  #objective-progress-fill{
+    height:100%; width:0%; border-radius:100px;
+    background:linear-gradient(90deg, var(--cyan), var(--gold));
+    box-shadow:0 0 8px var(--cyan);
+    transition:width 0.25s ease;
   }
 
   #tutorial-hint{
@@ -362,11 +392,22 @@
 
   .score-popup{
     position:absolute; z-index:17; font-family:var(--font-display); font-weight:bold;
-    font-size:1rem; color:var(--gold); pointer-events:none;
+    font-size:1.15rem; color:var(--gold); pointer-events:none;
     animation:popupFloat 0.9s ease forwards;
-    text-shadow:0 0 8px rgba(255,210,63,0.6);
+    text-shadow:0 0 10px rgba(255,210,63,0.8), 0 0 2px rgba(0,0,0,0.4);
   }
-  @keyframes popupFloat{ 0%{opacity:1; transform:translateY(0) scale(0.8);} 20%{transform:translateY(-6px) scale(1.1);} 100%{opacity:0; transform:translateY(-46px) scale(1);} }
+  @keyframes popupFloat{ 0%{opacity:1; transform:translateY(0) scale(0.6);} 25%{opacity:1; transform:translateY(-10px) scale(1.25);} 100%{opacity:0; transform:translateY(-50px) scale(1);} }
+
+  .glow-burst{
+    position:absolute; z-index:13; width:16px; height:16px; border-radius:50%;
+    pointer-events:none; transform:translate(-50%,-50%);
+    box-shadow:0 0 0 0 currentColor;
+    animation:glowBurst 0.5s ease-out forwards;
+  }
+  @keyframes glowBurst{
+    0%{ box-shadow:0 0 0 0 currentColor; opacity:0.9; transform:translate(-50%,-50%) scale(0.6); }
+    100%{ box-shadow:0 0 40px 18px transparent; opacity:0; transform:translate(-50%,-50%) scale(1.8); }
+  }
 
   .wind-zone{
     position:absolute; z-index:6; border-radius:14px;
@@ -416,6 +457,15 @@
   .overlay-card .stat .lbl{ font-size:0.65rem; letter-spacing:1px; text-transform:uppercase; color:rgba(244,242,255,0.6); }
 
   #overlay-level-complete h2{ color:var(--cyan); text-shadow:0 0 20px rgba(46,230,214,0.5); }
+  .new-best-badge{
+    display:inline-block; margin-top:2px; padding:3px 12px; border-radius:100px;
+    background:rgba(255,210,63,0.12); border:1px solid rgba(255,210,63,0.4);
+    color:var(--gold); font-size:0.68rem; letter-spacing:1px; text-transform:uppercase;
+  }
+  .lc-breakdown{
+    display:flex; justify-content:center; gap:16px; flex-wrap:wrap;
+    font-size:0.7rem; color:rgba(244,242,255,0.6); margin-top:-8px; margin-bottom:6px;
+  }
   #overlay-game-over h2{ color:var(--coral); text-shadow:0 0 20px rgba(255,93,122,0.5); }
 
   /* Victory screen */
@@ -475,6 +525,14 @@
         <button class="btn ghost" id="btn-continue">Continue</button>
       </div>
       <p class="hint-line">Guide your kite with <kbd>Mouse</kbd> or <kbd>Arrow Keys</kbd> / <kbd>WASD</kbd></p>
+
+      <div class="howto-panel">
+        <div class="howto-title">How to Play</div>
+        <div class="howto-row"><kbd>Mouse</kbd> Move pointer — kite glides toward it</div>
+        <div class="howto-row"><kbd>Arrows / WASD</kbd> Steer the kite manually</div>
+        <div class="howto-row"><kbd>Goal</kbd> Collect wind rings, cut opponent strings, dodge obstacles</div>
+      </div>
+
       <div class="reset-link" id="btn-reset-start">Reset Progress</div>
     </div>
   </div>
@@ -503,7 +561,10 @@
     </div>
     <div id="arena-wrap">
       <div id="arena">
-        <div id="objective-banner" class="glass-panel">Collect the Wind Rings</div>
+        <div id="objective-banner" class="glass-panel">
+          <span id="objective-text">Collect the Wind Rings</span>
+          <div id="objective-progress-track"><div id="objective-progress-fill"></div></div>
+        </div>
         <div id="wind-indicator"><div id="wind-arrow"></div></div>
         <div id="kite-string"></div>
         <div id="kite">
@@ -522,10 +583,12 @@
       <div class="big-icon">🪁</div>
       <h2>LEVEL COMPLETE</h2>
       <p id="lc-message" style="opacity:0.75;font-size:0.85rem;">Great flying!</p>
+      <div class="lc-breakdown" id="lc-breakdown"></div>
       <div class="stat-line">
         <div class="stat"><div class="num" id="lc-score">0</div><div class="lbl">Score</div></div>
         <div class="stat"><div class="num" id="lc-best">0</div><div class="lbl">Best</div></div>
       </div>
+      <div id="lc-new-best" class="new-best-badge" style="display:none;">★ New Best Score</div>
       <div class="btn-row">
         <button class="btn primary" id="btn-next-level">Next Level</button>
         <button class="btn ghost" id="btn-lc-levels">Level Select</button>
@@ -870,7 +933,21 @@ function updateObjectiveBanner(){
   if(cfg.ringsNeeded>0 && cfg.targetCuts) text = `Collect ${cfg.ringsNeeded} rings & cut ${cfg.targetCuts} strings`;
   else if(cfg.ringsNeeded>0) text = `Collect ${cfg.ringsNeeded} Wind Rings`;
   else if(cfg.targetCuts) text = `Cut ${cfg.targetCuts} opponent strings`;
-  objectiveBannerEl.textContent = text;
+  el('objective-text').textContent = text;
+  updateObjectiveProgress();
+}
+
+// Combines ring progress and string-cut progress (when a level has both)
+// into a single 0-100% fill so the player can see how close they are.
+function updateObjectiveProgress(){
+  if(!game) return;
+  const cfg = game.cfg;
+  const parts = [];
+  if(cfg.ringsNeeded>0) parts.push(Math.min(1, game.ringsCollected/cfg.ringsNeeded));
+  if(cfg.targetCuts>0) parts.push(Math.min(1, game.cutsMade/cfg.targetCuts));
+  const pct = parts.length ? (parts.reduce((a,b)=>a+b,0)/parts.length)*100 : 0;
+  const fill = document.getElementById('objective-progress-fill');
+  if(fill) fill.style.width = pct + '%';
 }
 
 function spawnInitialEntities(){
@@ -1153,6 +1230,16 @@ function spawnParticles(x,y,color,count){
   }
 }
 
+function spawnGlowBurst(x,y,color){
+  const g = document.createElement('div');
+  g.className = 'glow-burst';
+  g.style.color = color;
+  g.style.background = color;
+  positionEntity(g, x-8, y-8);
+  arena.appendChild(g);
+  setTimeout(()=>g.remove(), 520);
+}
+
 function spawnScorePopup(x,y,text){
   const pop = document.createElement('div');
   pop.className = 'score-popup';
@@ -1235,6 +1322,7 @@ function checkCollisions(){
 }
 
 function collectRing(r, idx){
+  spawnGlowBurst(r.x, r.y, '#2ee6d6');
   spawnParticles(r.x, r.y, '#2ee6d6', 12);
   spawnScorePopup(r.x, r.y, '+' + (10*game.combo));
   addScore(10*game.combo);
@@ -1244,6 +1332,7 @@ function collectRing(r, idx){
   game.rings.splice(idx,1);
   // respawn a fresh ring to keep arena lively (levels with target counts)
   if(game.ringsCollected < 999 && game.rings.length < 6) spawnRing();
+  updateObjectiveProgress();
   checkLevelObjective();
 }
 
@@ -1258,6 +1347,7 @@ function hitObstacle(){
 
 function cutOpponentString(o){
   o.alive = false;
+  spawnGlowBurst(o.x, o.y, o.hue);
   spawnParticles(o.x, o.y, o.hue, 18);
   spawnScorePopup(o.x, o.y, '+' + (25*game.combo));
   addScore(25*game.combo);
@@ -1280,6 +1370,7 @@ function cutOpponentString(o){
     if(game.running) spawnOpponent();
   }, 500);
 
+  updateObjectiveProgress();
   checkLevelObjective();
 }
 
@@ -1355,8 +1446,9 @@ function endLevel(success){
   stopGameLoop();
 
   const cfg = game.cfg;
-  const best = save.bestScores[cfg.id] || 0;
-  if(game.score > best) save.bestScores[cfg.id] = game.score;
+  const prevBest = save.bestScores[cfg.id] || 0;
+  const isNewBest = game.score > prevBest;
+  if(isNewBest) save.bestScores[cfg.id] = game.score;
 
   if(success){
     unlockLevel(cfg.id+1);
@@ -1370,6 +1462,15 @@ function endLevel(success){
     el('lc-score').textContent = game.score;
     el('lc-best').textContent = save.bestScores[cfg.id];
     el('lc-message').textContent = pickCompleteMessage(cfg.id);
+
+    // Cleaner breakdown: only show the stats relevant to this level's objective
+    const breakdownBits = [];
+    if(cfg.ringsNeeded>0) breakdownBits.push(`${game.ringsCollected}/${cfg.ringsNeeded} rings`);
+    if(cfg.targetCuts>0) breakdownBits.push(`${game.cutsMade}/${cfg.targetCuts} strings cut`);
+    el('lc-breakdown').textContent = breakdownBits.join(' · ');
+
+    el('lc-new-best').style.display = isNewBest ? 'inline-block' : 'none';
+
     showOverlay('levelComplete');
   } else {
     saveProgress();
